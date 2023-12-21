@@ -7,16 +7,20 @@ class Command:
 		self.num_keywords = len(keywords)
 		self.progress = progress
 		self.current_keyword = keywords[progress]
+		self.finished = False
 
-	def finished(self):
-		return self.progress = self.num_keywords
+	def finish(self):
+		self.finished = True
 
 	def update_next_keyword(self):
-		if self.finished():
+		if self.finished:
 			return False
 		else:
 			self.progress += 1
-			self.current_keyword = self.keywords[progress]
+			self.current_keyword = self.keywords[self.progress]
 
-	def action(self):
-		raise NotImplementedError("Actions not implemented!")
+	def reset(self):
+		self.progress = 0
+		self.current_keyword = self.keywords[0]
+		self.finished = False
+
