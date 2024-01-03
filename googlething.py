@@ -34,10 +34,7 @@ from google.cloud import speech
 import pyaudio
 import datetime
 
-from movecommand import MoveCommand
-
-# initialising command
-cmd = MoveCommand()
+from processcommands import CommandProcessor
 
 
 # Audio recording parameters
@@ -144,7 +141,7 @@ class MicrophoneStream:
             yield b"".join(data)
 
 
-def listen_print_loop(responses: object) -> str:
+def listen_print_loop(processor: object, responses: object) -> str:
     """Iterates through server responses and prints them.
 
     The responses passed is a generator that will block until a response
@@ -167,9 +164,6 @@ def listen_print_loop(responses: object) -> str:
     """
     num_chars_printed = 0
 
-    kwds_to_confirm = {}
-
-
     for response in responses:
         if not response.results:
             continue
@@ -184,14 +178,6 @@ def listen_print_loop(responses: object) -> str:
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
-        for word_info in result.alternatives[0].words:
-            word = word_info.word
-            end_time = word_info.end_time.seconds
-            if word == cmd.current_keyword and not cmd.finished:
-                kwds_to_confirm[cmd.current_keyword] = False
-                cmd.action(end_time)
-            elif word != cmd.current_keyword and not cmd.finished:
-                cmd.reset()
 
         #while re.search(r"\b({})\b".format(cmd.current_keyword), transcript, re.I) and not cmd.finished: ##############
         #                kwds_to_confirm[cmd.current_keyword] = False
@@ -218,33 +204,14 @@ def listen_print_loop(responses: object) -> str:
             print(f"Transcript: {alternative.transcript}")
             print(f"Confidence: {alternative.confidence}")
 
-            for word_info in alternative.words:
-                word = word_info.word
-                start_time = word_info.start_time
-                end_time = word_info.end_time
-
-                print(
-                    f"Word: {word}, start_time: {start_time.total_seconds()}, end_time: {end_time.total_seconds()}"
-                )
-
-
-            cmd_confirmed = True
-            for keyword in kwds_to_confirm.keys():
-                if not kwds_to_confirm[keyword]:
-                    if re.search(r"\b({})\b".format(keyword), transcript, re.I):
-                        kwds_to_confirm[keyword] = True
-                    else:
-                        cmd_confirmed = False
-            if cmd.finished and cmd_confirmed:
-                cmd.confirm_command()
-                cmd.reset()
-                kwds_to_confirm = {}
+            processor.process_commands(alternative.transcript, alternative.words)
 
             # Exit recognition if any of the transcribed phrases could be
             # one of our keywords.
 
             if re.search(r"\b(exit|quit)\b", transcript, re.I):
                 print("Exiting..")
+                processor.close()
                 break
 
             num_chars_printed = 0
@@ -301,12 +268,12 @@ def main() -> None:
         )
 
         init_time = datetime.datetime.now()
-        cmd.set_init_time(init_time) # should do this better
+        command_processor = CommandProcessor(init_time)
         responses = client.streaming_recognize(streaming_config, requests)
         print(init_time)
 
         # Now, put the transcription responses to use.
-        listen_print_loop(responses)
+        listen_print_loop(command_processor, responses)
 
 
 if __name__ == "__main__":
