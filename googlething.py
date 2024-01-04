@@ -37,6 +37,7 @@ import datetime
 from processcommands import CommandProcessor
 
 
+
 # Audio recording parameters
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
@@ -164,6 +165,8 @@ def listen_print_loop(processor: object, responses: object) -> str:
     """
     num_chars_printed = 0
 
+    last_word_sent_start = 0
+
     for response in responses:
         if not response.results:
             continue
@@ -178,10 +181,20 @@ def listen_print_loop(processor: object, responses: object) -> str:
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
+        if result.stability > 0.7 or result.stability == 0.0: #make constant?
+            print(44444, transcript)
+            print(len(result.alternatives[0].words))
+            for word_info in result.alternatives[0].words:
+                print(word_info.word, word_info.start_time)
+                start_time = word_info.start_time / datetime.timedelta(milliseconds = 1)
+                if int(start_time) > last_word_sent_start:
+                    print(55555)
+                    processor.process_commands(word_info)
+                    last_word_sent_start = start_time
+                else:
+                    print(start_time, "|", last_word_sent_start)
+                    
 
-        #while re.search(r"\b({})\b".format(cmd.current_keyword), transcript, re.I) and not cmd.finished: ##############
-        #                kwds_to_confirm[cmd.current_keyword] = False
-        #                cmd.action()
 
         # Display interim results, but with a carriage return at the end of the
         # line, so subsequent lines will overwrite them.
@@ -200,21 +213,16 @@ def listen_print_loop(processor: object, responses: object) -> str:
             print(transcript + overwrite_chars)
 
 
-            alternative = result.alternatives[0]
-            print(f"Transcript: {alternative.transcript}")
-            print(f"Confidence: {alternative.confidence}")
-
-            processor.process_commands(alternative.transcript, alternative.words)
-
             # Exit recognition if any of the transcribed phrases could be
             # one of our keywords.
 
             if re.search(r"\b(exit|quit)\b", transcript, re.I):
                 print("Exiting..")
-                processor.close()
                 break
 
             num_chars_printed = 0
+            last_word_sent_start = 0
+
 
     return transcript
 

@@ -16,7 +16,7 @@ class Command:
 
 	def action(self, offset):
 		keyword_index = self.progress
-		self.times[self.current_keyword] = self.init_time + timedelta(seconds=offset)
+		self.times[self.current_keyword] = self.init_time + timedelta(milliseconds=offset)
 
 		if keyword_index != self.num_keywords - 1:
 			self.update_next_keyword()
