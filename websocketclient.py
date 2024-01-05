@@ -5,7 +5,7 @@ from time import sleep
 def on_message(ws, message):
     print(message)
 
-def on_close(ws):
+def on_close(ws, close_status_code, close_msg):
     print("### closed ###")
 
 class WebSocketClient:
@@ -14,8 +14,9 @@ class WebSocketClient:
 
 
         websocket.enableTrace(True)
-        ws = websocket.WebSocketApp("ws://localhost:8001", on_message = on_message, on_close = on_close)
-        wst = threading.Thread(target=ws.run_forever)
+        ws = websocket.WebSocketApp("ws://localhost:7777", on_message = on_message, on_close = on_close)
+        wst = threading.Thread(target=ws.run_forever(dispatcher=rel, reconnect=0))
+
         wst.daemon = True
         wst.start()
 
