@@ -55,7 +55,6 @@ class PutCommand(Command):
 
 	def check_current_keyword(self, keyword):
 		if self.current_keyword in wildcardsdict:
-			print(keyword, self.current_keyword)
 			return keyword in wildcardsdict[self.current_keyword]
 
 		else:

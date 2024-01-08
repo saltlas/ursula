@@ -14,8 +14,8 @@ class WebSocketClient:
 
 
         websocket.enableTrace(True)
-        ws = websocket.WebSocketApp("ws://localhost:7777", on_message = on_message, on_close = on_close)
-        wst = threading.Thread(target=ws.run_forever(dispatcher=rel, reconnect=0))
+        ws = websocket.WebSocketApp("ws://localhost:8001", on_message = on_message, on_close = on_close)
+        wst = threading.Thread(target=ws.run_forever)
 
         wst.daemon = True
         wst.start()

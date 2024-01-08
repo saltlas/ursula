@@ -183,9 +183,7 @@ def listen_print_loop(processor: object, responses: object) -> str:
 
         if result.stability > 0.7 or result.stability == 0.0: #make constant?
             print(44444, transcript)
-            print(len(result.alternatives[0].words))
             for word_info in result.alternatives[0].words:
-                print(word_info.word, word_info.start_time)
                 start_time = word_info.start_time / datetime.timedelta(milliseconds = 1)
                 if int(start_time) > last_word_sent_start:
                     print(55555)
