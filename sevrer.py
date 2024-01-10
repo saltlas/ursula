@@ -3,6 +3,7 @@ import asyncio
 import websockets
 import aio_pika
 import logging
+import datetime
 
 
 async def handler(websocket):
@@ -18,11 +19,12 @@ async def handler(websocket):
 
         while True:
             message = await websocket.recv()
+            print(datetime.datetime.now())
             await exchange.publish(
                 aio_pika.Message(body=message.encode()),
                 routing_key=routing_key,
             )
-            print(message)
+            print(message, datetime.datetime.now())
 
 start_server = websockets.serve(handler, 'localhost', 8001)
 

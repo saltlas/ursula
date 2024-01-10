@@ -33,8 +33,10 @@ from google.cloud import speech
 
 import pyaudio
 import datetime
+import json
 
 from processcommands import CommandProcessor
+import phrase_utils
 
 
 
@@ -182,11 +184,9 @@ def listen_print_loop(processor: object, responses: object) -> str:
         transcript = result.alternatives[0].transcript
 
         if result.stability > 0.7 or result.stability == 0.0: #make constant?
-            print(44444, transcript)
             for word_info in result.alternatives[0].words:
                 start_time = word_info.start_time / datetime.timedelta(milliseconds = 1)
                 if int(start_time) > last_word_sent_start:
-                    print(55555)
                     processor.process_commands(word_info)
                     last_word_sent_start = start_time
                 else:
@@ -229,26 +229,20 @@ def main() -> None:
     """Transcribe speech from audio file."""
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
-    language_code = "en-AU"  # a BCP-47 language tag
+    config_file_path = "config.json"
+
+    with open(config_file_path, "r") as config_file:
+        project_config = json.load(config_file)
+    project_id = project_config["project_id"]
+    project_number = project_config["project_number"]
+    phrases = project_config["phrases"]
+
+    language_code = project_config["language_code"]  # a BCP-47 language tag
 
 
     # Create the adaptation client
     adaptation_client = speech.AdaptationClient()
-#phrase_set_response = adaptation_client.create_phrase_set(
- #       {
- #           "parent": f"projects/molten-avenue-408502/locations/global",
- #           "phrase_set_id": "1111",
- #           "phrase_set": {
- #               "boost": 10,
- #               "phrases": [
- #                   {"value": "Move $OPERAND"},
- #                   {"value": "Move"},
- #                   {"value": "$OPERAND"}
- #               ],
- #           }
- #       })"""
-    phrase_set_response = adaptation_client.get_phrase_set({"name": "projects/654665095839/locations/global/phraseSets/1111"})
-
+    phrase_set_response = phrase_utils.init_PhraseSet(adaptation_client, phrases, project_number, project_id)
     phrase_set_name = phrase_set_response.name
     speech_adaptation = speech.SpeechAdaptation(phrase_set_references=[phrase_set_name])
 
