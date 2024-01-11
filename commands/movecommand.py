@@ -1,5 +1,5 @@
 from .command import Command
-from jsonserializer import json_serial
+from utils import jsonserializer
 import json
 
 class MoveCommand(Command):
@@ -16,5 +16,5 @@ class MoveCommand(Command):
 			"moveZ": 0,
 			"timestamps": self.times
 		}
-		return json.dumps(event, default=json_serial)
+		return json.dumps(event, default=jsonserializer.json_serial)
 

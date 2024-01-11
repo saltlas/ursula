@@ -1,0 +1,1 @@
+wildcardsdict = {"select_word":["that", "this"], "move_word":["there", "here"]}

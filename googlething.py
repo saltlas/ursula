@@ -32,9 +32,11 @@ import sys
 from google.cloud import speech
 
 import pyaudio
-import datetime
+import json
 
-from processcommands import CommandProcessor
+import processcommands
+from utils import phrase_utils, time_utils
+
 
 
 # Audio recording parameters
@@ -164,6 +166,8 @@ def listen_print_loop(processor: object, responses: object) -> str:
     """
     num_chars_printed = 0
 
+    last_word_sent_start = 0
+
     for response in responses:
         if not response.results:
             continue
@@ -178,10 +182,16 @@ def listen_print_loop(processor: object, responses: object) -> str:
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
+        if result.stability > 0.7 or result.stability == 0.0: #make constant?
+            for word_info in result.alternatives[0].words:
+                start_time = time_utils.convert_timedelta_to_milliseconds(word_info.start_time)
+                if int(start_time) > last_word_sent_start:
+                    processor.process_commands(word_info)
+                    last_word_sent_start = start_time
+                else:
+                    print(start_time, "|", last_word_sent_start)
+                    
 
-        #while re.search(r"\b({})\b".format(cmd.current_keyword), transcript, re.I) and not cmd.finished: ##############
-        #                kwds_to_confirm[cmd.current_keyword] = False
-        #                cmd.action()
 
         # Display interim results, but with a carriage return at the end of the
         # line, so subsequent lines will overwrite them.
@@ -200,21 +210,16 @@ def listen_print_loop(processor: object, responses: object) -> str:
             print(transcript + overwrite_chars)
 
 
-            alternative = result.alternatives[0]
-            print(f"Transcript: {alternative.transcript}")
-            print(f"Confidence: {alternative.confidence}")
-
-            processor.process_commands(alternative.transcript, alternative.words)
-
             # Exit recognition if any of the transcribed phrases could be
             # one of our keywords.
 
             if re.search(r"\b(exit|quit)\b", transcript, re.I):
                 print("Exiting..")
-                processor.close()
                 break
 
             num_chars_printed = 0
+            last_word_sent_start = 0
+
 
     return transcript
 
@@ -223,26 +228,20 @@ def main() -> None:
     """Transcribe speech from audio file."""
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
-    language_code = "en-AU"  # a BCP-47 language tag
+    config_file_path = "config.json"
+
+    with open(config_file_path, "r") as config_file:
+        project_config = json.load(config_file)
+    project_id = project_config["project_id"]
+    project_number = project_config["project_number"]
+    phrases = project_config["phrases"]
+
+    language_code = project_config["language_code"]  # a BCP-47 language tag
 
 
     # Create the adaptation client
     adaptation_client = speech.AdaptationClient()
-#phrase_set_response = adaptation_client.create_phrase_set(
- #       {
- #           "parent": f"projects/molten-avenue-408502/locations/global",
- #           "phrase_set_id": "1111",
- #           "phrase_set": {
- #               "boost": 10,
- #               "phrases": [
- #                   {"value": "Move $OPERAND"},
- #                   {"value": "Move"},
- #                   {"value": "$OPERAND"}
- #               ],
- #           }
- #       })"""
-    phrase_set_response = adaptation_client.get_phrase_set({"name": "projects/654665095839/locations/global/phraseSets/1111"})
-
+    phrase_set_response = phrase_utils.init_PhraseSet(adaptation_client, phrases, project_number, project_id)
     phrase_set_name = phrase_set_response.name
     speech_adaptation = speech.SpeechAdaptation(phrase_set_references=[phrase_set_name])
 
@@ -267,8 +266,10 @@ def main() -> None:
             for content in audio_generator
         )
 
-        init_time = datetime.datetime.now()
-        command_processor = CommandProcessor(init_time)
+
+        init_time = time_utils.get_time()
+        print("!!", init_time)
+        command_processor = processcommands.CommandProcessor(init_time)
         responses = client.streaming_recognize(streaming_config, requests)
         print(init_time)
 

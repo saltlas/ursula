@@ -1,29 +1,38 @@
 import re
 from websocketclient import WebSocketClient
-from commands import movecommand, rotatecommand
+from commands import putcommand
+from utils import time_utils
 
 class CommandProcessor: #maybe make this cmdprocessorregex and make cmdprocessor the parent class
 	"""Processor for transcripts of voice commands"""
 	def __init__(self, init_time):
 		self.init_time = init_time
-		self.commands = {r'rotate\s+(\d+)\s+degrees':rotatecommand.RotateCommand, r'move\s+(\d+)':movecommand.MoveCommand} # change - maybe to dict w functions as vals?
+		self.commands = {"put":putcommand.PutCommand} # maybe make a selectcommand for "that" type thing
+		self.active_commands = []
 		self.websocketclient = WebSocketClient()
+		print("client not blocking")
 		
-	def process_commands(self, transcript, words):
+	def process_commands(self, word):
+		end_time = time_utils.convert_timedelta_to_milliseconds(word.end_time) 
+
 		for command in self.commands.keys():
-			for match in re.finditer(command, transcript):
-				keywords = transcript[match.start():match.end() + 1].split()
-				cmd = self.commands[command](keywords, self.init_time)
-				for word_info in words:
-					word = word_info.word
-					end_time = word_info.end_time.seconds
-					if word == cmd.current_keyword and not cmd.finished:
-						cmd.action(end_time)
-					elif word != cmd.current_keyword and not cmd.finished:
-						cmd.reset()
-				if cmd.finished:
-					self.websocketclient.send_message(cmd.serialize())
-					cmd.reset()
+			if word.word == command:
+				cmd = self.commands[command](self.init_time)
+				self.active_commands.append(cmd)
+
+		if len(self.active_commands) > 0:
+			for cmd in self.active_commands:
+				if cmd.check_current_keyword(word.word):
+					msg = cmd.action(end_time)
+					if msg:
+						self.websocketclient.send_message(msg)
+					if cmd.finished:
+						self.active_commands.remove(cmd)
+				else:
+					self.active_commands.remove(cmd)
 
 	def close(self):
 		self.websocketclient.close()
+
+
+
