@@ -25,7 +25,7 @@ class WebSocketClient:
         self.ws = ws
 
         rel.signal(2, self.close)  # Keyboard Interrupt  
-        rel.dispatch()  
+        #rel.dispatch()  # WHAT ARE THE DOWNSIDES OF COMMENTING THIS OUT??
 
         #wst.daemon = True
         #wst.start()

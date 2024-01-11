@@ -32,11 +32,10 @@ import sys
 from google.cloud import speech
 
 import pyaudio
-import datetime
 import json
 
-from processcommands import CommandProcessor
-import phrase_utils
+import processcommands
+from utils import phrase_utils, time_utils
 
 
 
@@ -185,7 +184,7 @@ def listen_print_loop(processor: object, responses: object) -> str:
 
         if result.stability > 0.7 or result.stability == 0.0: #make constant?
             for word_info in result.alternatives[0].words:
-                start_time = word_info.start_time / datetime.timedelta(milliseconds = 1)
+                start_time = time_utils.convert_timedelta_to_milliseconds(word_info.start_time)
                 if int(start_time) > last_word_sent_start:
                     processor.process_commands(word_info)
                     last_word_sent_start = start_time
@@ -267,8 +266,10 @@ def main() -> None:
             for content in audio_generator
         )
 
-        init_time = datetime.datetime.now()
-        command_processor = CommandProcessor(init_time)
+
+        init_time = time_utils.get_time()
+        print("!!", init_time)
+        command_processor = processcommands.CommandProcessor(init_time)
         responses = client.streaming_recognize(streaming_config, requests)
         print(init_time)
 

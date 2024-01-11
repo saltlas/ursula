@@ -1,7 +1,7 @@
 import re
 from websocketclient import WebSocketClient
 from commands import putcommand
-from datetime import timedelta, datetime
+from utils import time_utils
 
 class CommandProcessor: #maybe make this cmdprocessorregex and make cmdprocessor the parent class
 	"""Processor for transcripts of voice commands"""
@@ -10,9 +10,10 @@ class CommandProcessor: #maybe make this cmdprocessorregex and make cmdprocessor
 		self.commands = {"put":putcommand.PutCommand} # maybe make a selectcommand for "that" type thing
 		self.active_commands = []
 		self.websocketclient = WebSocketClient()
+		print("client not blocking")
 		
 	def process_commands(self, word):
-		end_time = word.end_time / timedelta(milliseconds = 1)
+		end_time = time_utils.convert_timedelta_to_milliseconds(word.end_time) 
 
 		for command in self.commands.keys():
 			if word.word == command:
@@ -24,7 +25,6 @@ class CommandProcessor: #maybe make this cmdprocessorregex and make cmdprocessor
 				if cmd.check_current_keyword(word.word):
 					msg = cmd.action(end_time)
 					if msg:
-						print("!!",  datetime.now())
 						self.websocketclient.send_message(msg)
 					if cmd.finished:
 						self.active_commands.remove(cmd)

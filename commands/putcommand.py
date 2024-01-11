@@ -1,7 +1,5 @@
-from wildcards import wildcardsdict
 from .command import Command
-from datetime import timedelta
-from jsonserializer import json_serial
+from utils import jsonserializer, wildcards, time_utils
 import json
 
 class PutCommand(Command):
@@ -21,22 +19,22 @@ class PutCommand(Command):
 
 
 		if keyword_index == 1:
-			timestamp = self.init_time + timedelta(milliseconds=offset)
+			timestamp =  time_utils.add_offset(offset, self.init_time)
 
 			event = {
 				"command": "select",
 				"timestamp": timestamp
 			}
-			return json.dumps(event, default=json_serial)
+			return json.dumps(event, default=jsonserializer.json_serial)
 
 		if keyword_index == 2:
-			timestamp = self.init_time + timedelta(milliseconds=offset)
+			timestamp =  time_utils.add_offset(offset, self.init_time)
 
 			event = {
 				"command": "move",
 				"timestamp": timestamp
 			}
-			return json.dumps(event, default=json_serial)
+			return json.dumps(event, default=jsonserializer.json_serial)
 
 	def finish(self):
 		self.finished = True
@@ -51,11 +49,11 @@ class PutCommand(Command):
 			"putZ": 0,
 			"timestamp": self.times
 		}
-		return json.dumps(event, default=json_serial)
+		return json.dumps(event, default=jsonserializer.json_serial)
 
 	def check_current_keyword(self, keyword):
-		if self.current_keyword in wildcardsdict:
-			return keyword in wildcardsdict[self.current_keyword]
+		if self.current_keyword in wildcards.wildcardsdict:
+			return keyword in wildcards.wildcardsdict[self.current_keyword]
 
 		else:
 			return self.current_keyword == keyword
