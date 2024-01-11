@@ -17,13 +17,14 @@ class CommandProcessor: #maybe make this cmdprocessorregex and make cmdprocessor
 
 		for command in self.commands.keys():
 			if word.word == command:
-				cmd = self.commands[command](self.init_time)
+				cmd = self.commands[command]()
 				self.active_commands.append(cmd)
 
 		if len(self.active_commands) > 0:
 			for cmd in self.active_commands:
 				if cmd.check_current_keyword(word.word):
-					msg = cmd.action(end_time)
+					timestamp = time_utils.add_offset(end_time, self.init_time)
+					msg = cmd.action(timestamp)
 					if msg:
 						self.websocketclient.send_message(msg)
 					if cmd.finished:

@@ -1,9 +1,6 @@
-from utils import time_utils
-
-
 class Command:
 	"""a command class"""
-	def __init__(self, keywords, init_time, progress=0):
+	def __init__(self, keywords, progress=0):
 		self.keywords = keywords
 		if len(keywords) < 1:
 			raise ValueError("Keywords list is empty!")
@@ -11,12 +8,11 @@ class Command:
 		self.progress = progress
 		self.current_keyword = keywords[progress]
 		self.finished = False
-		self.init_time = init_time
 		self.times = {}
 
-	def action(self, offset):
+	def action(self, timestamp):
 		keyword_index = self.progress
-		self.times[self.current_keyword] = time_utils.add_offset(offset, self.init_time)
+		self.times[self.current_keyword] = timestamp
 
 		if keyword_index != self.num_keywords - 1:
 			self.update_next_keyword()

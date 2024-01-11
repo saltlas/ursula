@@ -1,5 +1,5 @@
 from .command import Command
-from utils import jsonserializer, wildcards, time_utils
+from utils import jsonserializer, wildcards
 import json
 
 class PutCommand(Command):
@@ -7,7 +7,7 @@ class PutCommand(Command):
 		super().__init__(["put", "select_word", "move_word"], progress)
 		self.time = None
 
-	def action(self, offset):
+	def action(self, timestamp):
 		keyword_index = self.progress
 
 
@@ -19,7 +19,6 @@ class PutCommand(Command):
 
 
 		if keyword_index == 1:
-			timestamp =  time_utils.add_offset(offset, self.init_time)
 
 			event = {
 				"command": "select",
@@ -28,7 +27,6 @@ class PutCommand(Command):
 			return json.dumps(event, default=jsonserializer.json_serial)
 
 		if keyword_index == 2:
-			timestamp =  time_utils.add_offset(offset, self.init_time)
 
 			event = {
 				"command": "move",
