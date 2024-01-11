@@ -1,1 +1,4 @@
-wildcardsdict = {"select_word":["that", "this"], "move_word":["there", "here"]}
+select_words = ["that", "this"]
+move_words = ["there", "here"]
+
+wildcardsdict = {"select_word":select_words, "move_word":move_words}
