@@ -1,4 +1,4 @@
-aio_pika==9.3.1
+aio_pika==9.4.0
 protobuf==4.25.2
 pyaudio==0.2.14
 rel==0.4.9.5
