@@ -19,16 +19,16 @@ class WebSocketClient:
 
         websocket.enableTrace(True)
         ws = websocket.WebSocketApp("ws://localhost:8001", on_message = on_message, on_close = on_close, on_error = on_error)
-        #wst = threading.Thread(target=ws.run_forever(dispatcher=rel))
+        wst = threading.Thread(target=ws.run_forever)
 
-        ws.run_forever(dispatcher=rel)
+        #ws.run_forever(ping_interval=10, dispatcher=rel)
         self.ws = ws
 
         rel.signal(2, self.close)  # Keyboard Interrupt  
         #rel.dispatch()  # WHAT ARE THE DOWNSIDES OF COMMENTING THIS OUT??
 
-        #wst.daemon = True
-        #wst.start()
+        wst.daemon = True
+        wst.start()
 
 
     def send_message(self, info):

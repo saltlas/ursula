@@ -143,7 +143,7 @@ class MicrophoneStream:
             yield b"".join(data)
 
 
-def listen_print_loop(processor: object, responses: object) -> str:
+def listen_print_loop(processor: object, mode: object, responses: object) -> str:
     """Iterates through server responses and prints them.
 
     The responses passed is a generator that will block until a response
@@ -166,7 +166,6 @@ def listen_print_loop(processor: object, responses: object) -> str:
     """
     num_chars_printed = 0
 
-    last_word_sent_start = 0
 
     for response in responses:
         if not response.results:
@@ -182,14 +181,15 @@ def listen_print_loop(processor: object, responses: object) -> str:
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
-        if result.stability > 0.7 or result.stability == 0.0: #make constant?
-            for word_info in result.alternatives[0].words:
-                start_time = time_utils.convert_timedelta_to_milliseconds(word_info.start_time)
-                if int(start_time) > last_word_sent_start:
-                    processor.process_commands(word_info)
-                    last_word_sent_start = start_time
-                else:
-                    print(start_time, "|", last_word_sent_start)
+        if mode == "interim":
+            if (result.stability == 0.0 or result.stability > 0.7) and num_chars_printed < len(transcript):
+
+                for word in transcript[num_chars_printed:].split():
+                  # print("!", word, datetime.datetime.now() - datetime.timedelta(seconds=1)) # roughly a second delay in timestamp accuracy - may vary machine to machine
+                    print(word)
+                    processor.process_commands(word, time_utils.add_offset(-1, time_utils.get_time(), "seconds"))
+                num_chars_printed = len(transcript)
+
                     
 
 
@@ -198,27 +198,33 @@ def listen_print_loop(processor: object, responses: object) -> str:
         #
         # If the previous result was longer than this one, we need to print
         # some extra spaces to overwrite the previous result
-        overwrite_chars = " " * (num_chars_printed - len(transcript))
+        #overwrite_chars = " " * (num_chars_printed - len(transcript))
 
         if not result.is_final:
-            sys.stdout.write(transcript + overwrite_chars + "\r")
-            sys.stdout.flush()
+            #sys.stdout.write(transcript + overwrite_chars + "\r")
+            #sys.stdout.flush()
 
-            num_chars_printed = len(transcript)
-
+            #num_chars_printed = len(transcript)
+            pass
         else:
-            print(transcript + overwrite_chars)
+            #print(transcript + overwrite_chars)
+            if mode == "stable":
 
+                for word_info in result.alternatives[0].words:
+                    end_time = time_utils.convert_timedelta_to_milliseconds(word_info.end_time) 
+                    timestamp = time_utils.add_offset(end_time, processor.init_time)
+
+                    processor.process_commands(word_info.word, timestamp)
 
             # Exit recognition if any of the transcribed phrases could be
             # one of our keywords.
 
             if re.search(r"\b(exit|quit)\b", transcript, re.I):
                 print("Exiting..")
+                processor.close()
                 break
 
             num_chars_printed = 0
-            last_word_sent_start = 0
 
 
     return transcript
@@ -235,13 +241,14 @@ def main() -> None:
     project_id = project_config["project_id"]
     project_number = project_config["project_number"]
     phrases = project_config["phrases"]
-
+    transcription_mode = project_config["transcription_mode"]
     language_code = project_config["language_code"]  # a BCP-47 language tag
+    wildcards = project_config["wildcards"]
 
 
     # Create the adaptation client
     adaptation_client = speech.AdaptationClient()
-    phrase_set_response = phrase_utils.init_PhraseSet(adaptation_client, phrases, project_number, project_id)
+    phrase_set_response = phrase_utils.init_PhraseSet(adaptation_client, phrases, project_number, project_id, wildcards)
     phrase_set_name = phrase_set_response.name
     speech_adaptation = speech.SpeechAdaptation(phrase_set_references=[phrase_set_name])
 
@@ -256,7 +263,7 @@ def main() -> None:
     )
 
     streaming_config = speech.StreamingRecognitionConfig(
-        config=config, interim_results=True
+        config=config, interim_results=True,
     )
 
     with MicrophoneStream(RATE, CHUNK) as stream:
@@ -274,7 +281,7 @@ def main() -> None:
         print(init_time)
 
         # Now, put the transcription responses to use.
-        listen_print_loop(command_processor, responses)
+        listen_print_loop(command_processor, transcription_mode, responses)
 
 
 if __name__ == "__main__":

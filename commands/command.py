@@ -1,3 +1,7 @@
+import uuid
+from utils import jsonserializer, wildcards
+import json
+
 class Command:
 	"""a command class"""
 	def __init__(self, keywords, progress=0):
@@ -9,15 +13,23 @@ class Command:
 		self.current_keyword = keywords[progress]
 		self.finished = False
 		self.times = {}
+		self.session_id = str(uuid.uuid4())
 
-	def action(self, timestamp):
+	def action(self, timestamp, keyword):
 		keyword_index = self.progress
-		self.times[self.current_keyword] = timestamp
+		print("action", keyword_index)
 
 		if keyword_index != self.num_keywords - 1:
 			self.update_next_keyword()
 		else:
-			self.finish()		
+			self.finish()
+
+		event = {
+				"session_id": self.session_id,
+				"phrase": keyword,
+				"timestamp": timestamp
+			}
+		return json.dumps(event, default=jsonserializer.json_serial)		
 
 
 	def finish(self):
@@ -34,5 +46,14 @@ class Command:
 		self.progress = 0
 		self.current_keyword = self.keywords[0]
 		self.finished = False
+
+	def check_current_keyword(self, keyword):
+		if self.current_keyword in wildcards.wildcardsdict:
+			print(1)
+			return keyword in wildcards.wildcardsdict[self.current_keyword]
+
+		else:
+			print(2)
+			return self.current_keyword == keyword
 
 

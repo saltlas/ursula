@@ -1,36 +1,35 @@
 import re
 from websocketclient import WebSocketClient
-from commands import putcommand
-from utils import time_utils
+from commands import rotatecommand, selectcommand, deselectcommand, scalecommand
 
-class CommandProcessor: #maybe make this cmdprocessorregex and make cmdprocessor the parent class
+class CommandProcessor: 
 	"""Processor for transcripts of voice commands"""
 	def __init__(self, init_time):
 		self.init_time = init_time
-		self.commands = {"put":putcommand.PutCommand} # maybe make a selectcommand for "that" type thing
-		self.active_commands = []
+		self.commands = {"rotate":rotatecommand.RotateCommand, "select":selectcommand.SelectCommand, "deselect":deselectcommand.DeselectCommand, "scale":scalecommand.ScaleCommand} # maybe make a selectcommand for "that" type thing
+		self.active_command = None
 		self.websocketclient = WebSocketClient()
 		print("client not blocking")
-		
-	def process_commands(self, word):
-		end_time = time_utils.convert_timedelta_to_milliseconds(word.end_time) 
 
-		for command in self.commands.keys():
-			if word.word == command:
-				cmd = self.commands[command]()
-				self.active_commands.append(cmd)
 
-		if len(self.active_commands) > 0:
-			for cmd in self.active_commands:
-				if cmd.check_current_keyword(word.word):
-					timestamp = time_utils.add_offset(end_time, self.init_time)
-					msg = cmd.action(timestamp)
-					if msg:
-						self.websocketclient.send_message(msg)
-					if cmd.finished:
-						self.active_commands.remove(cmd)
-				else:
-					self.active_commands.remove(cmd)
+	def process_commands(self, word_str, time):
+		if word_str in self.commands.keys():
+			if not(self.active_command != None and self.active_command.check_current_keyword(word_str)):
+				cmd = self.commands[word_str]()
+				self.active_command = cmd
+
+		if self.active_command != None:
+			cmd = self.active_command
+			if cmd.check_current_keyword(word_str):
+				msg = cmd.action(time, word_str)
+				if msg:
+					self.websocketclient.send_message(msg)
+				if cmd.finished:
+					self.active_command = None
+			else:
+				self.active_command = None
+
+
 
 	def close(self):
 		self.websocketclient.close()

@@ -1,4 +1,5 @@
-def init_PhraseSet(client, phrases, project_number, project_id):
+from wildcards import wildcardsdict
+def init_PhraseSet(client, phrases, project_number, project_id, wildcards):
 	phraseset_id = "-".join(["-".join(phrase.split(" ")) for phrase in sorted(phrases)]).lower()
 	try:
 		response = client.get_phrase_set({"name": f"projects/{project_number}/locations/global/phraseSets/{phraseset_id}"})
@@ -13,6 +14,10 @@ def init_PhraseSet(client, phrases, project_number, project_id):
 				for word in range(len(split_phrase)):
 					values.add(split_phrase[word])
 					values.add(" ".join(split_phrase[:word + 1]))
+			for wildcard in wildcards:
+				for term in wildcardsdict[wildcard]:
+					values.add(term)
+
 			print(values)
 			json_phrases = [{"value": term} for term in values]
 			client.create_phrase_set({
