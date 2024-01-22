@@ -2,11 +2,15 @@ import asyncio
 
 import websockets
 import aio_pika
-import logging
 import datetime
 
 
 async def handler(websocket):
+    """function that runs upon websocket connection opening. 
+    handles opening rabbitmq connection, recieving websocket 
+    messages and sending them down rabbitmq"""
+
+    # open and set up non-blocking rabbitmq connection
     connection = await aio_pika.connect_robust(
         "amqp://guest:guest@localhost:5672/",
     )
@@ -18,13 +22,14 @@ async def handler(websocket):
         exchange = await channel.declare_exchange(name='myexchange', type=aio_pika.ExchangeType.TOPIC, durable = True)
 
         while True:
+            # recieve messages via websocket and send them down rabbitmq
             message = await websocket.recv()
-            print(datetime.datetime.now())
+            print(datetime.datetime.now()) # debug
             await exchange.publish(
                 aio_pika.Message(body=message.encode()),
                 routing_key=routing_key,
             )
-            print(message, datetime.datetime.now())
+            print(message, datetime.datetime.now()) # debug
 
 start_server = websockets.serve(handler, 'localhost', 8001)
 

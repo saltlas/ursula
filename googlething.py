@@ -1,29 +1,10 @@
-# Copyright 2017 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
-"""Google Cloud Speech API sample application using the streaming API.
+""" Main module for handling voice input as part of multimodal input project at HitLabNZ, 12/23-2/24.
 
-NOTE: This module requires the additional dependency `pyaudio`. To install
-using pip:
+Code based off of Google Cloud Speech API sample application using the streaming API, which is distributed under Apache License.
 
-    pip install pyaudio
-
-Example usage:
-    python transcribe_streaming_mic.py
 """
 
-# [START speech_transcribe_streaming_mic]
 
 import queue
 import re
@@ -207,34 +188,39 @@ class ResumableMicrophoneStream:
 
 
 def listen_print_loop(processor: object, mode: object, responses: object, stream: object) -> str:
-    """Iterates through server responses and prints them.
+    """Iterates through server responses and sends them to the command processor.
 
     The responses passed is a generator that will block until a response
     is provided by the server.
 
     Each response may contain multiple results, and each result may contain
-    multiple alternatives; for details, see https://goo.gl/tjCPAU.  Here we
-    print only the transcription for the top alternative of the top result.
+    multiple alternatives; for details, see https://goo.gl/tjCPAU.  If the mode is 'interim', we process stable interim results 
+    as well as final ones, increasing speed but decreasing accuracy. If the mode is 'stable', we process only final results.
 
-    In this case, responses are provided for interim results as well. If the
-    response is an interim one, print a line feed at the end of it, to allow
-    the next result to overwrite it, until the response is a final one. For the
-    final one, print a newline to preserve the finalized transcription.
+    This module implements "endless streaming", since Google has a limit on how many seconds long a streamed API request 
+    can be. When the time limit is reached, we stop processing and regenerate the stream and request.
 
     Args:
+        processor: The CommandProcessor object to send transcriptions to
+        mode: 'interim' or 'stable' to determine handling of interim results
         responses: List of server responses
+        stream: ResumableMicrophoneStream object
+
 
     Returns:
         The transcribed text.
     """
-    num_chars_printed = 0
+
+    num_chars_printed = 0 # used to keep track of what words we've already processed in interim mode, since "put that there" may arrive after a result containing "put that"
 
 
     for response in responses:
+
+        # restart stream if we've reached the streaming limit
         if time_utils.get_time_milliseconds() - stream.start_time > STREAMING_LIMIT:
             stream.start_time = time_utils.get_time_milliseconds()
             num_chars_printed = 0
-            print("RESTARTING")
+            print("RESTARTING") # debug
             break
 
         if not response.results:
@@ -247,20 +233,20 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
         if not result.alternatives:
             continue
 
-        # Display the transcription of the top alternative.
+        # transcription of the top alternative.
         transcript = result.alternatives[0].transcript
 
 
         if mode == "interim":
-            if (result.stability == 0.0 or result.stability > 0.7) and num_chars_printed < len(transcript):
+            if (result.stability == 0.0 or result.stability > 0.7) and num_chars_printed < len(transcript): # only considering relatively stable results longer than the previous transcript we've encountered
 
                 for word in transcript[num_chars_printed:].split():
-                  # print("!", word, datetime.datetime.now() - datetime.timedelta(seconds=1)) # roughly a second delay in timestamp accuracy - may vary machine to machine
                     print(word)
-                    processor.process_commands(word, time_utils.add_offset(-1, time_utils.get_time(), "seconds"))
+                    processor.process_commands(word, time_utils.add_offset(-1, time_utils.get_time(), "seconds")) # roughly a second delay in timestamp accuracy - may vary machine to machine
                 num_chars_printed = len(transcript)
 
-                    
+        
+        # endless streaming logic           
         result_seconds = 0
         result_micros = 0
 
@@ -272,18 +258,10 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
 
         stream.result_end_time = int((result_seconds * 1000) + (result_micros / 1000))
 
-        # Display interim results, but with a carriage return at the end of the
-        # line, so subsequent lines will overwrite them.
-        #
-        # If the previous result was longer than this one, we need to print
-        # some extra spaces to overwrite the previous result
-        #overwrite_chars = " " * (num_chars_printed - len(transcript))
+        
 
         if not result.is_final:
-            #sys.stdout.write(transcript + overwrite_chars + "\r")
-            #sys.stdout.flush()
-
-            #num_chars_printed = len(transcript)
+            
             if mode == "interim" and result.stability > 0.7:
                 stream.is_final_end_time = stream.result_end_time
                 stream.last_transcript_was_final = True
@@ -291,21 +269,20 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
                 stream.last_transcript_was_final = False
 
         else:
-            #print(transcript + overwrite_chars)
             if mode == "stable":
 
                 for word_info in result.alternatives[0].words:
+                    # google cloud api provides word timestamps relative to beginning of stream, but only for final results
                     end_time = time_utils.convert_timedelta_to_milliseconds(word_info.end_time) 
                     timestamp = time_utils.add_offset(end_time, processor.init_time)
-                    print(word_info.word)
+                    print(word_info.word) # debug
                     processor.process_commands(word_info.word, timestamp)
 
 
             stream.is_final_end_time = stream.result_end_time
             stream.last_transcript_was_final = True
 
-            # Exit recognition if any of the transcribed phrases could be
-            # one of our keywords.
+            # Exit recognition
 
             if re.search(r"\b(exit|quit)\b", transcript, re.I):
                 print("Exiting..")
@@ -359,6 +336,7 @@ def main() -> None:
 
     command_processor = None
 
+    # streaming to API
     with mic_manager as stream:
 
         while not stream.closed:
@@ -372,8 +350,9 @@ def main() -> None:
                 for content in audio_generator
             )
 
+            # initialising command processor or, if we have already, just resetting the time the stream started so that we know what to add timestamp offsets to
             init_time = time_utils.get_time()
-            print("!!", init_time)
+            print("!!", init_time) # debug
             if not command_processor:
                 command_processor = processcommands.CommandProcessor(init_time)
             else:
@@ -384,6 +363,7 @@ def main() -> None:
             # Now, put the transcription responses to use.
             listen_print_loop(command_processor, transcription_mode, responses, stream)
 
+            # endless streaming logic
             if stream.result_end_time > 0:
                 stream.final_request_end_time = stream.is_final_end_time
             stream.result_end_time = 0
@@ -402,4 +382,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-# [END speech_transcribe_streaming_mic]
