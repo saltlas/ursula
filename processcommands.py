@@ -23,11 +23,13 @@ class CommandProcessor:
 			if cmd.check_current_keyword(word_str):
 				msg = cmd.action(time, word_str)
 				if msg:
+					print(self.active_command)
 					self.websocketclient.send_message(msg)
 				if cmd.finished:
 					self.active_command = None
 			else:
 				self.active_command = None
+
 
 
 

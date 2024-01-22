@@ -1,5 +1,5 @@
 from datetime import timedelta, datetime
-
+import time
 
 
 def add_offset(offset, init_time, unit="milliseconds"):
@@ -15,3 +15,6 @@ def convert_timedelta_to_milliseconds(time_to_convert):
 
 def get_time():
 	return datetime.now()
+
+def get_time_milliseconds():
+	return time.time() * 1000
