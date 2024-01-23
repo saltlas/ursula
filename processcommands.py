@@ -7,7 +7,7 @@ class CommandProcessor:
 	Receives strings representing voice input, matches them to command keywords
 	and sends relevant messages to websocket connection."""
 
-	def __init__(self, init_time):
+	def __init__(self, init_time, port):
 		self.init_time = init_time
 
 		# first keyword in each command to match to the Command object containing relevant command logic
@@ -21,7 +21,7 @@ class CommandProcessor:
 		self.active_command = None # only one active command at a time
 
 		# initializing websocket connection
-		self.websocketclient = WebSocketClient()
+		self.websocketclient = WebSocketClient(port)
 		print("client not blocking") # debug
 
 

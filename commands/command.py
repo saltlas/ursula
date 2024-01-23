@@ -1,6 +1,5 @@
 import uuid
-from utils import jsonserializer, wildcards
-import json
+from utils import serializer, wildcards
 
 class Command:
 	"""Base class for all commands dictating default logic. 
@@ -43,7 +42,7 @@ class Command:
 				"phrase": keyword,
 				"timestamp": timestamp
 			}
-		return json.dumps(event, default=jsonserializer.json_serial)		
+		return self.serialize(event)	
 
 
 	def finish(self):
@@ -68,4 +67,6 @@ class Command:
 		else:
 			return self.current_keyword == keyword
 
+	def serialize(self, data):
+		return serializer.json_serialize(data)
 

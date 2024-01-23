@@ -25,6 +25,9 @@ STREAMING_LIMIT = 300000  # 5 minutes
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 
+# result stability threshold for interim mode
+RESULT_STABILITY_THRESHOLD = 0.7
+
 
 class ResumableMicrophoneStream:
     """Opens a recording stream as a generator yielding the audio chunks."""
@@ -238,7 +241,7 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
 
 
         if mode == "interim":
-            if (result.stability == 0.0 or result.stability > 0.7) and num_chars_printed < len(transcript): # only considering relatively stable results longer than the previous transcript we've encountered
+            if (result.stability == 0.0 or result.stability > RESULT_STABILITY_THRESHOLD) and num_chars_printed < len(transcript): # only considering relatively stable results longer than the previous transcript we've encountered
 
                 for word in transcript[num_chars_printed:].split():
                     print(word)
@@ -262,7 +265,7 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
 
         if not result.is_final:
             
-            if mode == "interim" and result.stability > 0.7:
+            if mode == "interim" and result.stability > RESULT_STABILITY_THRESHOLD:
                 stream.is_final_end_time = stream.result_end_time
                 stream.last_transcript_was_final = True
             else:
@@ -286,6 +289,7 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
 
             if re.search(r"\b(exit|quit)\b", transcript, re.I):
                 print("Exiting..")
+                stream.closed = True
                 processor.close()
                 break
 
@@ -308,12 +312,12 @@ def main() -> None:
     phrases = project_config["phrases"]
     transcription_mode = project_config["transcription_mode"]
     language_code = project_config["language_code"]  # a BCP-47 language tag
-    wildcards = project_config["wildcards"]
+    websocket_port = project_config["websocket_port"]
 
 
     # Create the adaptation client
     adaptation_client = speech.AdaptationClient()
-    phrase_set_response = phrase_utils.init_PhraseSet(adaptation_client, phrases, project_number, project_id, wildcards)
+    phrase_set_response = phrase_utils.init_PhraseSet(adaptation_client, phrases, project_number, project_id)
     phrase_set_name = phrase_set_response.name
     speech_adaptation = speech.SpeechAdaptation(phrase_set_references=[phrase_set_name])
 
@@ -327,8 +331,13 @@ def main() -> None:
         enable_word_time_offsets=True,
     )
 
+    if transcription_mode == "interim":
+        allow_interim_results = True
+    elif transcription_mode == "stable":
+        allow_interim_results = False
+
     streaming_config = speech.StreamingRecognitionConfig(
-        config=config, interim_results=True,
+        config=config, interim_results=allow_interim_results,
     )
 
     mic_manager = ResumableMicrophoneStream(RATE, CHUNK)
@@ -354,7 +363,7 @@ def main() -> None:
             init_time = time_utils.get_time()
             print("!!", init_time) # debug
             if not command_processor:
-                command_processor = processcommands.CommandProcessor(init_time)
+                command_processor = processcommands.CommandProcessor(init_time, websocket_port)
             else:
                 command_processor.init_time = init_time
 

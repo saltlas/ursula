@@ -14,11 +14,11 @@ def on_error(ws, error):
 class WebSocketClient:
     """establishes non-blocking websocket client connection and
     sends messages down websocket when needed"""
-    def __init__(self):
+    def __init__(self, port):
 
 
         websocket.enableTrace(True)
-        ws = websocket.WebSocketApp("ws://localhost:8001", on_message = on_message, on_close = on_close, on_error = on_error)
+        ws = websocket.WebSocketApp(port, on_message = on_message, on_close = on_close, on_error = on_error)
 
         # runs it on new thread to prevent blocking
         wst = threading.Thread(target=ws.run_forever)
