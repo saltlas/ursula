@@ -1,13 +1,14 @@
 import re
 from websocketclient import WebSocketClient
-from commands import rotatecommand, selectcommand, deselectcommand, scalecommand
+from commands import rotatecommand, selectcommand, deselectcommand, scalecommand, putcommand, movecommand
+
 
 class CommandProcessor: 
 	"""Processor for transcripts of voice commands.
 	Receives strings representing voice input, matches them to command keywords
 	and sends relevant messages to websocket connection."""
 
-	def __init__(self, init_time, port):
+	def __init__(self, init_time, port, wrong_words_allowed):
 		self.init_time = init_time
 
 		# first keyword in each command to match to the Command object containing relevant command logic
@@ -15,7 +16,9 @@ class CommandProcessor:
 			"rotate":rotatecommand.RotateCommand,
 			"select":selectcommand.SelectCommand,
 			"deselect":deselectcommand.DeselectCommand,
-			"scale":scalecommand.ScaleCommand
+			"scale":scalecommand.ScaleCommand,
+			"put":putcommand.PutCommand,
+			"move":movecommand.MoveCommand
 		} 
 
 		self.active_command = None # only one active command at a time
@@ -23,6 +26,8 @@ class CommandProcessor:
 		# initializing websocket connection
 		self.websocketclient = WebSocketClient(port)
 		print("client not blocking") # debug
+		self.wrong_words = 0
+		self.wrong_words_allowed = wrong_words_allowed
 
 
 	def process_commands(self, word_str, time):
@@ -42,7 +47,7 @@ class CommandProcessor:
 		if self.active_command != None:
 			cmd = self.active_command
 			if cmd.check_current_keyword(word_str):
-
+				self.wrong_words = 0
 				# if command-specific logic for this keyword returns a message, we send it through websocket connection
 				msg = cmd.action(time, word_str)
 				if msg:
@@ -51,7 +56,10 @@ class CommandProcessor:
 				if cmd.finished:
 					self.active_command = None
 			else:
-				self.active_command = None
+				self.wrong_words += 1
+				if self.wrong_words > self.wrong_words_allowed:
+					self.active_command = None
+					self.wrong_words = 0
 
 
 

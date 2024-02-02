@@ -21,7 +21,7 @@ from utils import phrase_utils, time_utils
 
 
 # Audio recording parameters
-STREAMING_LIMIT = 300000  # 5 minutes
+STREAMING_LIMIT = 90000  # 5 minutes
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 
@@ -215,7 +215,7 @@ def listen_print_loop(processor: object, mode: object, responses: object, stream
     """
 
     num_chars_printed = 0 # used to keep track of what words we've already processed in interim mode, since "put that there" may arrive after a result containing "put that"
-
+    
 
     for response in responses:
 
@@ -313,6 +313,7 @@ def main() -> None:
     transcription_mode = project_config["transcription_mode"]
     language_code = project_config["language_code"]  # a BCP-47 language tag
     websocket_port = project_config["websocket_port"]
+    wrong_words_allowed = project_config["wrong_words_allowed"]
 
 
     # Create the adaptation client
@@ -363,13 +364,19 @@ def main() -> None:
             init_time = time_utils.get_time()
             print("!!", init_time) # debug
             if not command_processor:
-                command_processor = processcommands.CommandProcessor(init_time, websocket_port)
+                command_processor = processcommands.CommandProcessor(init_time, websocket_port, wrong_words_allowed)
             else:
                 command_processor.init_time = init_time
 
             responses = client.streaming_recognize(streaming_config, requests)
 
             # Now, put the transcription responses to use.
+            listen_print_loop(command_processor, transcription_mode, responses, stream)
+            print("stream2")
+            #audio_generator = stream.generator()
+            stream.start_time = time_utils.get_time_milliseconds()
+            responses = client.streaming_recognize(streaming_config, requests)
+
             listen_print_loop(command_processor, transcription_mode, responses, stream)
 
             # endless streaming logic
