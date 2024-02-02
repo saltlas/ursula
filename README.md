@@ -20,7 +20,7 @@ The `requirements.txt` file should have all python libraries needed to run the p
 
 You will need to create an account on [Google Cloud](https://cloud.google.com/) and recieve your free trial credits. If you have already used up all of your free trial credits, you will need to set up payment with Google Cloud for this module to work.
 
-Once done, you will need to create a project using [Cloud Speech-to-Text API](https://console.cloud.google.com/apis/api/speech.googleapis.com/), and then [use those credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc) to set up Google Cloud CLI on your machine. If the project gives you errors about permissions and credentials when it tries to access Google Cloud API, you've done this step wrong.
+Once done, you will need to create a project using [Cloud Speech-to-Text API](https://console.cloud.google.com/apis/api/speech.googleapis.com/), and then [use those credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc) to set up Google Cloud CLI on your machine. Once done, `pip install google-cloud-speech` and run `gcloud auth application-default login` from the project directory. If the project gives you errors about permissions and credentials when it tries to access Google Cloud API, you've done this step wrong.
 
 
 ### config.json
@@ -43,7 +43,7 @@ Example: 123456789876
 
 - project_id
 
-The word and number combination that represents your project on the project page. This should be available in the same place the project number is.
+The name that represents your project on the project page. This should be available in the same place the project number is.
 
 Example: "lava-street-101010"
 
@@ -65,6 +65,12 @@ The port the input manager will be listening on for websocket messages from this
 
 Example: "ws://localhost:8001"
 
+- wrong_words_allowed
+
+The number of wrong word you want to allow between keywords of a command (e.g. given a command "put that there", "put that over there" would not work with wrong_words_allowed = 0 but will work with wrong_words_allowed = 1)
+
+example: 1
+
 **Example `config.json`:**
 
 ```
@@ -74,7 +80,8 @@ Example: "ws://localhost:8001"
 "project_id": "lava-street-101010",
 "language_code": "en-AU",
 "transcription_mode": "stable",
-"websocket_port": "ws://localhost:8001"
+"websocket_port": "ws://localhost:8001",
+"wrong_words_allowed": 1
 }
 ```
 
