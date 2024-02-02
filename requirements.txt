@@ -4,3 +4,4 @@ pyaudio==0.2.14
 rel==0.4.9.5
 websocket_client==1.7.0
 websockets==12.0
+google-cloud-speech==2.23.0

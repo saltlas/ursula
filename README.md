@@ -67,9 +67,9 @@ Example: "ws://localhost:8001"
 
 - wrong_words_allowed
 
-The number of wrong word you want to allow between keywords of a command (e.g. given a command "put that there", "put that over there" would not work with wrong_words_allowed = 0 but will work with wrong_words_allowed = 1)
+The number of wrong words in a row you want to allow between keywords of a command (e.g. given a command "put that there", "put that over there" would not work with wrong_words_allowed = 0 but will work with wrong_words_allowed = 1)
 
-example: 1
+Example: 1
 
 **Example `config.json`:**
 

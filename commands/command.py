@@ -24,7 +24,7 @@ class Command:
 		# generate unique session ID at command beginning using UUID 4
 		self.session_id = str(uuid.uuid4())
 
-		def action(self, timestamp, keyword):
+	def action(self, timestamp, keyword):
 		"""action to take based on keyword spoken. 
 		not relevant to current implementation
 		but in some cases could specifically send 
