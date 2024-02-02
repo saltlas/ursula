@@ -4,7 +4,7 @@ This branch contains the voice input module as part of the multi-modal input pro
 1. [Setup](#setup)
 	1. [Requirements](#requirements)
 	2. [Google Cloud API](#google-cloud-api)
-	3. [config.json](#config.json)
+	3. [config.json](#configjson)
 2. [Common Issues on Lab Machines](#common-issues-on-lab-machines)
 	1. [RabbitMQ](#rabbitmq)
 	2. [Unity Hub won't open the project](#unity-hub-wont-open-the-project)
