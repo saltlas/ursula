@@ -1,7 +1,7 @@
 aio_pika==9.4.0
 protobuf==4.25.2
 pyaudio==0.2.14
-rel==0.4.9.5
+rel==0.4.9.6
 websocket_client==1.7.0
 websockets==12.0
 word2number==1.1
