@@ -8,6 +8,9 @@ This branch contains the voice input module as part of the multi-modal input pro
 2. [Common Issues on Lab Machines](#common-issues-on-lab-machines)
 	1. [RabbitMQ](#rabbitmq)
 	2. [Unity Hub won't open the project](#unity-hub-wont-open-the-project)
+3. [Next Steps for Future Contributors](#next-steps-for-future-contributors)
+	1. [Known Bugs](#known-bugs)
+	2. [Extensions](#extensions)
 
 
 ## Setup
@@ -114,3 +117,21 @@ If this doesn't work, try running `rabbitmq-service install` and then `rabbitmq-
 
 ### Unity Hub won't open the project
 If Unity Hub is just restarting itself whenever you try to open a project, make sure the project is not on your `P:`. If it is, move it to `C:`.
+
+## Next steps for future contributors
+
+As this is a summer internship project, naturally I'll have to leave it without having done everything possible. Here are some bugs to fix and ideas for extension:
+
+### Known bugs
+
+- The stream needs to restart once every 5 minutes or so to avoid being timed out by Google's API, which at the time of writing only accepts streams of audio up to 305 seconds long. When it restarts, for a second or two there is a period in which, if the user is speaking, a word or two may get lost. This seems like an easy issue to fix but it's actually the worst due to how Google's endless streaming tutorial (which the main code is based off of) handles this issue and how the response objects work. The current proposed approach is to open two microphone streams and stagger their opening and their API calls.
+
+- The way I've implemented commands is such that each command has a "hotword" that initiates it - e.g. if the word "put" is said it starts a PutCommand. This is all well and good until you need to have two commands such as "take a picture" and "take a screenshot". One option, if the desired behaviour is the same (sending the word to the input manager) is to make "picture" and "screenshot" into a wildcard (see `utils/wildcards.py`) but this approach falls apart if the two commands are extremely different, such as "take a picture" and "take this object". I suggest a command inheritance system of a sort, in which a parent command (TakeCommand) can initialise a child command (PictureCommand) if it recieves a certain keyword. One thing to be aware of in this approach is that the session ID, which is at the moment initialised when the command is first initialised, needs to be the same between these two commands.
+
+### Extensions
+
+- Is Google Cloud API the best tool for the service? Have a look at Dragon NaturallySpeaking and other services to see if it is.
+
+- At the moment the module is processing input word-by-word and sending low level data to the input manager, but in the main file, the transcript is still floating around and usable. The transcript could be used to send higher-level (phrase-based) events alongside the low level (word-based) tokens - this could be useful for things like fuzzy phrase matching.
+
+- For fans of NLP, you could see if you can predict what the most probable words for a user to say next (based on what the user has already said) are. There aren't any concretely useful applications for this in the project at the moment, but it could lead to something gnarly like autocomplete capability with voice.
